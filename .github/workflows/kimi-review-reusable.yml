@@ -113,11 +113,8 @@ jobs:
             fi
           fi
 
-          {
-            echo 'body<<EOF'
-            printf '%s\n' "$CONTENT"
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+          BODY_B64="$(printf '%s' "$CONTENT" | base64 -w 0)"
+          echo "body_b64=$BODY_B64" >> "$GITHUB_OUTPUT"
 
       - name: Post PR comment
         if: steps.diff.outputs.has_diff == 'true' && steps.dedupe.outputs.already_done != 'true'
@@ -129,12 +126,13 @@ jobs:
           MARKER="<!-- ${MARKER_PREFIX}:pr=${PR_NUMBER} sha=${HEAD_SHA} -->"
 
           COMMENT_FILE="$(mktemp)"
+          KIMI_BODY="$(printf '%s' "${{ steps.kimi.outputs.body_b64 }}" | base64 -d)"
           {
             echo "$MARKER"
             echo
             echo "### Kimi K2.5 Co-Review"
             echo
-            printf '%s\n' "${{ steps.kimi.outputs.body }}"
+            printf '%s\n' "$KIMI_BODY"
           } > "$COMMENT_FILE"
 
           gh pr comment "$PR_NUMBER" --repo "$REPO" --body-file "$COMMENT_FILE"
